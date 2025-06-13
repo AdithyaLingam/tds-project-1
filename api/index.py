@@ -4,18 +4,18 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.main import router as api_router
+from app.main import app as fastapi_app
+import uvicorn
+import os
 
-app = FastAPI()
-
-# Enable CORS
+app = fastapi_app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Update this later for security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include the main router
-app.include_router(api_router)
+if __name__ == "__main__":
+    uvicorn.run("api.index:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
