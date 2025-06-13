@@ -6,8 +6,7 @@ from .rag_pipeline import query_and_generate
 
 app = FastAPI(
     title="TDS Virtual TA API",
-    description="API for answering questions about the Tools in Data Science course.",
-    version="0.1.0"
+    description="API for answering questions about the Tools in Data Science course."
 )
 
 @app.get("/", include_in_schema=False)
@@ -31,7 +30,7 @@ async def get_answer(request: QuestionRequest):
         llm_response_json = query_and_generate(request.question)
 
         response_data = json.loads(llm_response_json)
-        
+
         return AnswerResponse(**response_data)
 
     except Exception as e:
