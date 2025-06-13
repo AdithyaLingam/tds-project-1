@@ -9,9 +9,10 @@ import uvicorn
 import os
 
 app = fastapi_app
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this later for security
+    allow_origins=["*"],  # Update for production if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
