@@ -82,46 +82,54 @@
 
 
 # app/rag_pipeline.py
+
 from app.config import settings
-from app.models import Link
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.llms import Ollama
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chains import RetrievalQA
-import json
+
 import requests
-from app.config import settings
+
 
 def query_openwebui(prompt: str) -> str:
     url = f"{settings.OLLAMA_HOST}/api/generate"
     payload = {
-        "model": settings.LLM_MODEL,  # e.g. "llama3"
+        "model": "llama3",
+        "prompt": prompt,
+        "stream": False
+    }
+
+    try:
+        res = requests.post(url, json=payload)
+        res.raise_for_status()
+        return res.json()["response"]
+        
+    except Exception as e:
+        return f"Error querying OpenWebUI: {e}"
+
+
+def load_vector_store():
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    vectorstore = Chroma(
+        persist_directory=str(settings.VECTOR_STORE_DIR),
+        embedding_function=embeddings
+    )
+    return vectorstore
+    
+
+def query_and_generate(query: str) -> str:
+    prompt = f"Answer the following question:\n\n{query}"
+    payload = {
+        "model": settings.LLM_MODEL,
         "prompt": prompt,
         "stream": False
     }
     try:
-        res = requests.post(url, json=payload)
-        res.raise_for_status()
-        return res.json().get("response", "")
+        response = requests.post(
+            f"{settings.OLLAMA_HOST}/api/generate",
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json().get("response", "No answer returned.")
     except Exception as e:
-        return f"Error: {e}"
-
-def load_vector_store():
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
-    return Chroma(persist_directory=str(settings.VECTOR_STORE_DIR), embedding_function=embeddings)
-
-def get_rag_chain():
-    vectorstore = load_vector_store()
-    retriever = vectorstore.as_retriever()
-    llm = Ollama(model=settings.LLM_MODEL)
-    return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-
-def query_and_generate(query: str) -> str:
-    vectorstore = load_vector_store()
-    retriever = vectorstore.as_retriever()
-    docs = retriever.get_relevant_documents(query)
-    context = "\n".join([doc.page_content for doc in docs])
-
-    prompt = f"Answer the following based on context:\n\nContext:\n{context}\n\nQuestion: {query}"
-    return query_openwebui(prompt)
+        return f"Error querying OpenWebUI: {e}"

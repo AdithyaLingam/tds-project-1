@@ -51,10 +51,9 @@
 #         raise HTTPException(status_code=500, detail="Failed to process the query.")
 
 import json
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from app.models import QuestionRequest, AnswerResponse
-from app.rag_pipeline import query_and_generate
-
+from app.rag_pipeline import query_openwebui
 
 app = FastAPI(
     title="TDS Virtual TA API",
@@ -73,20 +72,20 @@ async def health():
 async def get_answer(request: QuestionRequest):
     if not request.question:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
     try:
-        llm_response_json = query_and_generate(request.question)
-        response_data = json.loads(llm_response_json)
-        return AnswerResponse(**response_data)
+        answer = query_openwebui(request.question)
+        return AnswerResponse(answer=answer, links=[])
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to process the question.")
 
 @app.get("/ask", response_model=AnswerResponse)
-async def ask(query: str):
+async def ask(query: str = Query(..., description="The question to ask.")):
     try:
-        llm_response_json = query_and_generate(query)
-        response_data = json.loads(llm_response_json)
-        return AnswerResponse(**response_data)
+        answer = query_openwebui(query)
+        return AnswerResponse(answer=answer, links=[])
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to process the query.")
+
