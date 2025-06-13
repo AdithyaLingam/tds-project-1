@@ -1,0 +1,17 @@
+# Ignore cache, models, local dbs, environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.json
+data/
+chroma_db/
+.env
+.venv/
+venv/
+api/__pycache__/
+app/__pycache__/
+scripts/__pycache__/
