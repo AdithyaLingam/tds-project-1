@@ -11,11 +11,7 @@ beautifulsoup4
 pydantic
 pydantic-settings
 
-# Scraping
+# Scraping & Vector DB
 requests
 langchain
 langchain-community
-langchain-openai
-
-# Utilities
-python-dotenv
