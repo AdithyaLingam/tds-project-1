@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, FastAPI
 from .models import QuestionRequest, AnswerResponse
 from .rag_pipeline import query_and_generate
 
@@ -7,6 +7,10 @@ app = FastAPI(
     title="TDS Virtual TA API",
     description="API for answering questions about the Tools in Data Science course."
 )
+
+@app.get("/")
+def read_root():
+    return {"message": "OK"}
 
 # Define the router
 router = APIRouter()
