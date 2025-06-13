@@ -87,10 +87,25 @@ from app.models import Link
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.llms import Ollama
-from openwebui import OpenWebUIClient
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 import json
+import requests
+from app.config import settings
+
+def query_openwebui(prompt: str) -> str:
+    url = f"{settings.OLLAMA_HOST}/api/generate"
+    payload = {
+        "model": settings.LLM_MODEL,  # e.g. "llama3"
+        "prompt": prompt,
+        "stream": False
+    }
+    try:
+        res = requests.post(url, json=payload)
+        res.raise_for_status()
+        return res.json().get("response", "")
+    except Exception as e:
+        return f"Error: {e}"
 
 def load_vector_store():
     embeddings = OllamaEmbeddings(model="nomic-embed-text")
@@ -103,22 +118,10 @@ def get_rag_chain():
     return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
 def query_and_generate(query: str) -> str:
-    # Load or reuse vector store
-    if "vectorstore" not in globals():
-        from langchain.vectorstores import Chroma
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        globals()['vectorstore'] = Chroma(
-            persist_directory=str(settings.VECTOR_STORE_DIR),
-            embedding_function=embeddings
-        )
+    vectorstore = load_vector_store()
     retriever = vectorstore.as_retriever()
     docs = retriever.get_relevant_documents(query)
-    context = "\n".join([d.page_content for d in docs])
+    context = "\n".join([doc.page_content for doc in docs])
 
-    prompt = f"Context:\n{context}\n\nQuestion:\n{query}"
-    try:
-        client = OpenWebUIClient(base_url=os.getenv("OPENWEBUI_URL", "http://localhost:5000"))
-        resp = client.chat(model=os.getenv("OPENWEBUI_MODEL", "llama-2-7b-chat"), prompt=prompt)
-        return resp.get("response", "")
-    except Exception as e:
-        return f"Error: {e}"
+    prompt = f"Answer the following based on context:\n\nContext:\n{context}\n\nQuestion: {query}"
+    return query_openwebui(prompt)

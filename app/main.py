@@ -55,6 +55,7 @@ from fastapi import FastAPI, HTTPException
 from app.models import QuestionRequest, AnswerResponse
 from app.rag_pipeline import query_and_generate
 
+
 app = FastAPI(
     title="TDS Virtual TA API",
     description="API for answering questions about the Tools in Data Science course."
