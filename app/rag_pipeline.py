@@ -80,67 +80,30 @@
     
 #     return response.choices[0].message.content
 
-# app/rag_pipeline.py
 
+# app/rag_pipeline.py
 from app.config import settings
 from app.models import Link
-
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.llms import Ollama
 from langchain.chains import RetrievalQA
-
-from typing import Union
-
-def query_and_generate(query: str) -> str:
-    retriever = vectorstore.as_retriever()
-    docs = retriever.get_relevant_documents(query)
-    context = "\n".join([doc.page_content for doc in docs])
-    
-    prompt = f"Answer the following based on context:\n\nContext:\n{context}\n\nQuestion: {query}"
-    
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # or the exact local model name used by Ollama like "llama3", "mistral", etc.
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Error generating response: {e}"
-
+import json
 
 def load_vector_store():
-    """
-    Loads the vector database persisted on disk using Ollama embeddings.
-    """
     embeddings = OllamaEmbeddings(model="nomic-embed-text")
-    vectorstore = Chroma(
-        persist_directory=str(settings.VECTOR_STORE_DIR),
-        embedding_function=embeddings
-    )
-    return vectorstore
-
+    return Chroma(persist_directory=str(settings.VECTOR_STORE_DIR), embedding_function=embeddings)
 
 def get_rag_chain():
-    """
-    Creates a RetrievalQA chain from a local Ollama LLM and Chroma vector store.
-    """
     vectorstore = load_vector_store()
     retriever = vectorstore.as_retriever()
     llm = Ollama(model=settings.LLM_MODEL)
     return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-
-def get_answer(query: str) -> str:
-    """
-    Executes a Retrieval-Augmented Generation pipeline and returns the answer.
-    """
+def query_and_generate(query: str) -> str:
     try:
         rag_chain = get_rag_chain()
         result = rag_chain.run(query)
-        return result
+        return json.dumps({"answer": result, "links": []})
     except Exception as e:
-        return f"An error occurred while generating answer: {e}"
+        return json.dumps({"answer": f"Error: {e}", "links": []})
