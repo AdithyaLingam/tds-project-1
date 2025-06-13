@@ -52,3 +52,5 @@ async def ask(query: str):
 @router.get("/health", include_in_schema=False)
 async def health():
     return {"status": "ok"}
+
+app.include_router(router)
