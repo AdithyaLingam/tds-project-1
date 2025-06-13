@@ -11,6 +11,7 @@ beautifulsoup4
 pydantic
 pydantic-settings
 ollama
+openwebui-client
 
 # Scraping & Vector DB
 requests

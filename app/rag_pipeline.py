@@ -87,6 +87,8 @@ from app.models import Link
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.llms import Ollama
+from openwebui import OpenWebUIClient
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 import json
 
@@ -101,9 +103,22 @@ def get_rag_chain():
     return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
 def query_and_generate(query: str) -> str:
+    # Load or reuse vector store
+    if "vectorstore" not in globals():
+        from langchain.vectorstores import Chroma
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        globals()['vectorstore'] = Chroma(
+            persist_directory=str(settings.VECTOR_STORE_DIR),
+            embedding_function=embeddings
+        )
+    retriever = vectorstore.as_retriever()
+    docs = retriever.get_relevant_documents(query)
+    context = "\n".join([d.page_content for d in docs])
+
+    prompt = f"Context:\n{context}\n\nQuestion:\n{query}"
     try:
-        rag_chain = get_rag_chain()
-        result = rag_chain.run(query)
-        return json.dumps({"answer": result, "links": []})
+        client = OpenWebUIClient(base_url=os.getenv("OPENWEBUI_URL", "http://localhost:5000"))
+        resp = client.chat(model=os.getenv("OPENWEBUI_MODEL", "llama-2-7b-chat"), prompt=prompt)
+        return resp.get("response", "")
     except Exception as e:
-        return json.dumps({"answer": f"Error: {e}", "links": []})
+        return f"Error: {e}"
