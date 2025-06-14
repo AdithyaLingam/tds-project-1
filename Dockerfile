@@ -21,4 +21,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8000
 
 # Use Python runner that respects Railway's dynamic port
-CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port $PORT"]
+
+CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"]
