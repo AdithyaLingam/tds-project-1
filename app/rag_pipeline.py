@@ -91,20 +91,23 @@ import requests
 
 
 def query_openwebui(prompt: str) -> str:
-    url = f"{settings.OLLAMA_HOST}/api/generate"
     payload = {
-        "model": "llama3",
+        "model": settings.LLM_MODEL,
         "prompt": prompt,
         "stream": False
     }
-
     try:
-        res = requests.post(url, json=payload)
+        res = requests.post(f"{settings.OLLAMA_HOST}/api/generate", json=payload)
         res.raise_for_status()
         return res.json()["response"]
-        
     except Exception as e:
         return f"Error querying OpenWebUI: {e}"
+
+
+def query_and_generate(query: str) -> str:
+    prompt = f"Answer the following question:\n\n{query}"
+    return query_openwebui(prompt)
+
 
 
 def load_vector_store():
@@ -114,22 +117,4 @@ def load_vector_store():
         embedding_function=embeddings
     )
     return vectorstore
-    
 
-def query_and_generate(query: str) -> str:
-    prompt = f"Answer the following question:\n\n{query}"
-    payload = {
-        "model": settings.LLM_MODEL,
-        "prompt": prompt,
-        "stream": False
-    }
-    try:
-        response = requests.post(
-            f"{settings.OLLAMA_HOST}/api/generate",
-            json=payload,
-            timeout=30
-        )
-        response.raise_for_status()
-        return response.json().get("response", "No answer returned.")
-    except Exception as e:
-        return f"Error querying OpenWebUI: {e}"
