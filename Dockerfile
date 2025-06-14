@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose port (not strictly required, but good for Docker compatibility)
 EXPOSE 8000
+ENV PORT 8000
 
 # Use Python runner that respects Railway's dynamic port
-CMD ["python", "-m", "api.index"]
+CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port $PORT"]
