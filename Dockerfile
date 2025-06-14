@@ -20,5 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Default port (Railway auto-detects)
 ENV PORT=8000
 
+EXPOSE 8000
+
 # Start FastAPI using Uvicorn
 CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "8000"]
+
