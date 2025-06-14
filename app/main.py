@@ -62,7 +62,7 @@ app = FastAPI(
 
 @app.get("/", include_in_schema=False)
 def root():
-    return {"message": "OK"}
+    return {"message": "TDS Virtual TA API is running."}
 
 @app.get("/health", include_in_schema=False)
 def health():
