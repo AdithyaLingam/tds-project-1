@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy files
 COPY . .
 
-# Install system packages (for bs4/lxml if needed)
+# Install system packages
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -17,11 +17,8 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Default port (Railway auto-detects)
-ENV PORT=8000
-
+# Expose port (not strictly required, but good for Docker compatibility)
 EXPOSE 8000
 
-# Start FastAPI using Uvicorn
-CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "8000"]
-
+# Use Python runner that respects Railway's dynamic port
+CMD ["python", "-m", "api.index"]
