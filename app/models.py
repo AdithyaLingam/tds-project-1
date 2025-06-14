@@ -1,17 +1,16 @@
 # app/models.py
-from pydantic import BaseModel, HttpUrl
-from typing import List
-
-class QuestionRequest(BaseModel):
-    """Input model for RAG query."""
-    question: str
+from pydantic import BaseModel
+from typing import List, Optional
 
 class Link(BaseModel):
-    """Represents a single source link in the response."""
-    url: HttpUrl
+    url: str
     text: str
 
-class AnswerResponse(BaseModel):
-    """Final structured JSON output from the assistant."""
+class QARequest(BaseModel):
+    question: str
+    image: Optional[str] = None  # base64 string
+
+class QAResponse(BaseModel):
     answer: str
     links: List[Link] = []
+

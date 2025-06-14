@@ -1,131 +1,124 @@
-# # app/rag_pipeline.py
-# import chromadb
-# import os
-# from openai import OpenAI
-# from .config import settings
-# from .models import Link
-# from dotenv import load_dotenv
-# from chromadb.errors import NotFoundError
-
-# # Initialize clients once to be reused
-# load_dotenv()
-
-# openai_client = os.getenv("OPENAI_API_KEY")
-# chroma_client = chromadb.PersistentClient(path=str(settings.VECTOR_STORE_DIR))
-# try:
-#     collection = chroma_client.get_collection(name="tds_virtual_ta")
-# except NotFoundError:
-#     collection = chroma_client.create_collection(name="tds_virtual_ta")
-
-
-# def embed_function(texts):
-#     response = openai_client.embeddings.create(
-#         input=texts,
-#         model=settings.EMBEDDING_MODEL
-#     )
-#     return [r.embedding for r in response.data]
-
-
-# def query_and_generate(question: str) -> (str, list[Link]):
-#     """
-#     Queries the vector store and generates an answer using an LLM.
-#     """
-#     # 1. Query ChromaDB to find relevant context
-#     query_embedding = embed_function([question])[0]
-#     results = collection.query(
-#         query_embeddings=[query_embedding],
-#         n_results=5 # Get the top 5 most relevant documents
-#     )
-    
-#     context_docs = results['documents'][0]
-#     metadatas = results['metadatas'][0]
-    
-#     if not context_docs:
-#         return "I could not find any relevant information in my knowledge base to answer your question.", []
-        
-#     # 2. Build the prompt for the LLM
-#     context = "\n---\n".join(
-#         [f"Source: {meta['source']}\nContent: {doc}" for doc, meta in zip(context_docs, metadatas)]
-#     )
-    
-#     system_prompt = """
-#     You are a helpful Teaching Assistant for the IIT Madras 'Tools in Data Science' course.
-#     Your task is to answer a student's question based *only* on the provided context from the course's Discourse forum.
-#     - Be direct and concise.
-#     - If the context does not contain the answer, state that you don't have enough information.
-#     - Synthesize information from multiple sources if necessary.
-#     - For each piece of information in your answer, reference the source URL from the context.
-#     - Your final output must be a single JSON object with two keys: "answer" (a string) and "links" (a list of JSON objects, each with "url" and "text" keys).
-#     - The "text" in the links should be a direct, relevant quote from the source.
-#     """
-    
-#     user_prompt = f"""
-#     CONTEXT:
-#     ---
-#     {context}
-#     ---
-#     STUDENT'S QUESTION: {question}
-#     """
-    
-#     # 3. Call the LLM to generate the answer
-#     # Using the JSON response format feature of new OpenAI models
-#     response = openai_client.chat.completions.create(
-#         model=settings.LLM_MODEL,
-#         response_format={"type": "json_object"},
-#         messages=[
-#             {"role": "system", "content": system_prompt},
-#             {"role": "user", "content": user_prompt}
-#         ]
-#     )
-    
-#     return response.choices[0].message.content
-
-
 # app/rag_pipeline.py
+import os
+import base64
 import requests
+import tempfile
+from typing import List
 from app.config import settings
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OpenAIEmbeddings, OllamaEmbeddings
-from langchain_community.llms import OpenAI, Ollama
+from langchain_openai import OpenAIEmbeddings
+from langchain_core.documents import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
+from langchain_community.llms import OpenAI
+from langchain.vectorstores.base import VectorStoreRetriever
 
-def load_vector_store():
-    embeddings = (
-        OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
-        if settings.USE_OPENAI else
-        OllamaEmbeddings(model="nomic-embed-text")
-    )
-    return Chroma(
-        persist_directory=str(settings.VECTOR_STORE_DIR),
-        embedding_function=embeddings
-    )
+CHROMA_PATH = "data/chroma_db/"
 
-def get_rag_chain():
-    retriever = load_vector_store().as_retriever()
-    llm = (
-        OpenAI(model=settings.LLM_MODEL, temperature=0, openai_api_key=settings.OPENAI_API_KEY)
-        if settings.USE_OPENAI else
-        Ollama(model=settings.LLM_MODEL)
-    )
-    return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+embedding_model = OpenAIEmbeddings(
+    model=settings.EMBEDDING_MODEL,
+    openai_api_base="https://aiproxy.sanand.workers.dev/openai/v1",
+    openai_api_key=settings.OPENAI_API_KEY
+)
 
-def query_and_generate(query: str) -> str:
-    if settings.USE_OPENAI:
-        chain = get_rag_chain()
-        return chain.run(query)
-    else:
-        return query_openwebui(query)
+vector_store = Chroma(
+    persist_directory=str(settings.VECTOR_STORE_DIR),
+    embedding_function=embedding_model
+)
 
-def query_openwebui(prompt: str) -> str:
-    url = "http://localhost:11434/api/generate"
+retriever = vector_store.as_retriever()
+
+def get_vectorstore():
+    return Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_model)
+
+def build_docs_from_texts(texts: List[str]) -> List[Document]:
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    documents = splitter.create_documents(texts)
+    return documents
+
+def generate_embeddings(texts: List[str]):
+    vectorstore = get_vectorstore()
+    documents = build_docs_from_texts(texts)
+    vectorstore.add_documents(documents)
+    vectorstore.persist()
+
+def ask_question(question: str) -> str:
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.OPENAI_API_KEY}"
+    }
     payload = {
         "model": settings.LLM_MODEL,
-        "prompt": prompt,
-        "stream": False
+        "messages": [
+            {"role": "system", "content": "You are a helpful Teaching Assistant for the Tools in Data Science course."},
+            {"role": "user", "content": question}
+        ]
     }
+    response = requests.post(
+        "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
+        headers=headers,
+        json=payload
+    )
+    if response.status_code != 200:
+        return f"Backend is working! Error: Error code: {response.status_code} - {response.text}"
+    return response.json()["choices"][0]["message"]["content"]
+
+def process_image(base64_image: str) -> str:
     try:
-        res = requests.post(url, json=payload)
-        res.raise_for_status()
-        return res.json()["response"]
+        import pytesseract
+        from PIL import Image
+    except ImportError:
+        return "Image OCR dependencies not installed."
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+        image_data = base64.b64decode(base64_image)
+        temp_file.write(image_data)
+        temp_file.close()
+        image = Image.open(temp_file.name)
+        return pytesseract.image_to_string(image)
+
+def query_and_generate(question: str, image_b64: str | None = None) -> dict:
+    extracted_text = ""
+    if image_b64:
+        from io import BytesIO
+        import base64
+        from PIL import Image
+        import pytesseract
+
+        try:
+            image_data = base64.b64decode(image_b64)
+            image = Image.open(BytesIO(image_data))
+            extracted_text = pytesseract.image_to_string(image)
+        except Exception as e:
+            extracted_text = f"[OCR Error: {str(e)}]"
+
+    final_prompt = f"{question}\n\n{extracted_text}".strip()
+    relevant_docs = vector_store.similarity_search(final_prompt, k=4)
+    context = "\n\n".join([doc.page_content for doc in relevant_docs])
+
+    messages = [
+        {"role": "system", "content": "You are a teaching assistant answering questions using the Tools in Data Science course material."},
+        {"role": "user", "content": f"Question: {question}\n\nContext:\n{context}"}
+    ]
+
+    try:
+        response = requests.post(
+            "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": settings.LLM_MODEL,
+                "messages": messages
+            }
+        )
+        response.raise_for_status()
+        answer = response.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        return f"Error querying OpenWebUI: {e}"
+        answer = f"Backend is working! Error: {str(e)}"
+
+    return {
+        "answer": answer,
+        "links": []
+    }
