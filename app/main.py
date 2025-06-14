@@ -51,44 +51,37 @@
 #         raise HTTPException(status_code=500, detail="Failed to process the query.")
 
 import json
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from app.models import QuestionRequest, AnswerResponse
-from app.rag_pipeline import query_openwebui
+from app.rag_pipeline import query_and_generate
 
 app = FastAPI(
     title="TDS Virtual TA API",
     description="API for answering questions about the Tools in Data Science course."
 )
 
+@app.get("/", include_in_schema=False)
+def root():
+    return {"message": "TDS Virtual TA API is running."}
+
 @app.get("/health", include_in_schema=False)
-def health():
-    return {"status": "alive"}
-
-# @app.post("/api/", response_model=AnswerResponse)
-# async def get_answer(request: QuestionRequest):
-#     if not request.question:
-#         raise HTTPException(status_code=400, detail="Question cannot be empty.")
-
-#     try:
-#         answer = query_openwebui(request.question)
-#         return AnswerResponse(answer=answer, links=[])
-#     except Exception as e:
-#         print(f"Error: {e}")
-#         raise HTTPException(status_code=500, detail="Failed to process the question.")
-
-@app.get("/ask", response_model=AnswerResponse)
-async def ask(query: str = Query(..., description="The question to ask.")):
-    try:
-        answer = query_openwebui(query)
-        return AnswerResponse(answer=answer, links=[])
-    except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process the query.")
+async def health():
+    return {"status": "ok"}
 
 @app.post("/api/", response_model=AnswerResponse)
 async def get_answer(request: QuestionRequest):
-    return {
-        "answer": "Backend is working! Ollama not connected yet.",
-        "links": []
-    }
+    if not request.question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+    try:
+        response_text = query_and_generate(request.question)
+        return AnswerResponse(answer=response_text, links=[])
+    except Exception as e:
+        return AnswerResponse(answer=f"Backend is working! Error: {e}", links=[])
 
+@app.get("/ask", response_model=AnswerResponse)
+async def ask(query: str):
+    try:
+        response_text = query_and_generate(query)
+        return AnswerResponse(answer=response_text, links=[])
+    except Exception as e:
+        return AnswerResponse(answer=f"Backend is working! Error: {e}", links=[])

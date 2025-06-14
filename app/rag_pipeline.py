@@ -82,39 +82,50 @@
 
 
 # app/rag_pipeline.py
-
+import requests
 from app.config import settings
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings, OllamaEmbeddings
+from langchain_community.llms import OpenAI, Ollama
+from langchain.chains import RetrievalQA
 
-import requests
+def load_vector_store():
+    embeddings = (
+        OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
+        if settings.USE_OPENAI else
+        OllamaEmbeddings(model="nomic-embed-text")
+    )
+    return Chroma(
+        persist_directory=str(settings.VECTOR_STORE_DIR),
+        embedding_function=embeddings
+    )
 
+def get_rag_chain():
+    retriever = load_vector_store().as_retriever()
+    llm = (
+        OpenAI(model=settings.LLM_MODEL, temperature=0, openai_api_key=settings.OPENAI_API_KEY)
+        if settings.USE_OPENAI else
+        Ollama(model=settings.LLM_MODEL)
+    )
+    return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+
+def query_and_generate(query: str) -> str:
+    if settings.USE_OPENAI:
+        chain = get_rag_chain()
+        return chain.run(query)
+    else:
+        return query_openwebui(query)
 
 def query_openwebui(prompt: str) -> str:
+    url = "http://localhost:11434/api/generate"
     payload = {
         "model": settings.LLM_MODEL,
         "prompt": prompt,
         "stream": False
     }
     try:
-        res = requests.post(f"{settings.OLLAMA_HOST}/api/generate", json=payload)
+        res = requests.post(url, json=payload)
         res.raise_for_status()
         return res.json()["response"]
     except Exception as e:
         return f"Error querying OpenWebUI: {e}"
-
-
-def query_and_generate(query: str) -> str:
-    prompt = f"Answer the following question:\n\n{query}"
-    return query_openwebui(prompt)
-
-
-
-def load_vector_store():
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
-    vectorstore = Chroma(
-        persist_directory=str(settings.VECTOR_STORE_DIR),
-        embedding_function=embeddings
-    )
-    return vectorstore
-
