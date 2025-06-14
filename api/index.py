@@ -18,3 +18,7 @@ app.add_middleware(
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))  # Use Railway's injected PORT
     uvicorn.run("api.index:app", host="0.0.0.0", port=port)
+
+@app.get("/", include_in_schema=False)
+def root():
+    return {"message": "TDS Virtual TA API is running."}

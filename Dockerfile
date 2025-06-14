@@ -1,25 +1,21 @@
-# Use Python base image
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy files
-COPY . .
-
-# Install system packages
+# Install dependencies
+COPY requirements.txt .
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the rest of the app
+COPY . .
 
-# Expose port (not strictly required, but good for Docker compatibility)
+# Expose port for Railway
 EXPOSE 8000
 
-# Use Python runner that respects Railway's dynamic port
-
-CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port $PORT"]
+# Run Uvicorn on the port Railway provides, fallback to 8000
+CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -60,10 +60,6 @@ app = FastAPI(
     description="API for answering questions about the Tools in Data Science course."
 )
 
-@app.get("/", include_in_schema=False)
-def root():
-    return {"message": "TDS Virtual TA API is running."}
-
 @app.get("/health", include_in_schema=False)
 def health():
     return {"status": "alive"}
