@@ -1,15 +1,20 @@
-# api/index.py
-from fastapi import FastAPI
+import os
+import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from app.main import app as fastapi_app
-import uvicorn
-import os
 
+# Assign FastAPI app instance
+app = fastapi_app
+
+# Add CORS middleware AFTER app is defined
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # You can restrict this for prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))  # Use Railway's injected PORT
+    uvicorn.run("api.index:app", host="0.0.0.0", port=port)
