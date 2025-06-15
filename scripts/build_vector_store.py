@@ -61,6 +61,16 @@ def load_documents(input_dir: str) -> List[Document]:
     print(f"Loaded {len(documents)} documents. Skipped {skipped} empty posts.")
     return documents
 
+def load_markdown_documents(md_dir: str) -> List[Document]:
+    md_docs = []
+    for path in Path(md_dir).rglob("*.md"):
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if content:
+                md_docs.append(Document(page_content=content, metadata={"source": str(path)}))
+    print(f"Loaded {len(md_docs)} markdown documents.")
+    return md_docs
+
 def embed_with_retry(client: OpenAI, texts: list[str], retries: int = 3, delay: int = 2) -> list[list[float]]:
     # Sanitize input to be a list of clean strings
     cleaned_texts = [
@@ -97,7 +107,12 @@ class OpenAIEmbeddingsViaProxy(Embeddings):
 
 def main():
     print("Loading documents...")
-    docs = load_documents(DISCOURSE_JSON_DIR)
+    discourse_docs = load_documents(DISCOURSE_JSON_DIR)
+    print("Loading Markdown pages...")
+    markdown_docs = load_markdown_documents("data/tds_pages_md")
+
+    docs = discourse_docs + markdown_docs
+
     if not docs:
         print("No documents found. Exiting.")
         return
