@@ -1,11 +1,11 @@
 # app/main.py
-
 import base64
 from fastapi import FastAPI, HTTPException, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from app.rag_pipeline import query_and_generate
+from typing import Optional
 
 app = FastAPI(
     title="TDS Virtual TA API",
@@ -31,7 +31,7 @@ async def form_root(request: Request):
 async def handle_form(
     request: Request,
     question: str = Form(...),
-    image: UploadFile = File(None)
+    image: Optional[UploadFile] = File(None)
 ):
     image_preview = None
     image_base64 = None

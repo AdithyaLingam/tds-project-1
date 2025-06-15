@@ -7,6 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 class Settings(BaseSettings):
     # AI Proxy token stored as OPENAI_API_KEY
     OPENAI_API_KEY: str | None = None
+    RAW_COOKIE_STRING: str
 
     # Whether to use OpenAI-compatible endpoints (True = AI Proxy)
     USE_OPENAI: bool = True
