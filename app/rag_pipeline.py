@@ -3,7 +3,7 @@ import os
 import base64
 import requests
 import tempfile
-from typing import List
+from typing import List, Tuple
 from app.config import settings
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
@@ -99,7 +99,8 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
             extracted_text = f"[OCR Error: {str(e)}]"
 
     final_prompt = f"{question}\n\n{extracted_text}".strip()
-    relevant_docs = vector_store.similarity_search(final_prompt, k=6)
+    results: List[Tuple[Document, float]] = vector_store.similarity_search_with_score(final_prompt, k=6)
+    relevant_docs = [doc for doc, score in results if score is None or score > 0.7][:3]
     context = "\n\n".join([doc.page_content for doc in relevant_docs])
 
     messages = [
@@ -121,7 +122,7 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
         )
         response.raise_for_status()
         answer = response.json()["choices"][0]["message"]["content"].strip()
-        
+
     except Exception as e:
         answer = f"Backend is working! Error: {str(e)}"
 
