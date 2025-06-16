@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from app.rag_pipeline import query_and_generate
 from typing import Optional
+from app.models import QARequest, QAResponse
 
 app = FastAPI(
     title="TDS Virtual TA API",
@@ -36,7 +37,7 @@ async def handle_form(
     image_preview = None
     image_base64 = None
 
-    if image:
+    if image and hasattr(image, "filename") and image.filename:
         try:
             image_bytes = await image.read()
             image_base64 = base64.b64encode(image_bytes).decode("utf-8")
@@ -63,3 +64,11 @@ async def handle_form(
             "question": question,
             "answer": f"Backend is working! Error: {str(e)}"
         })
+
+@app.post("/api", response_model=QAResponse)
+async def handle_api_json(request: QARequest):
+    try:
+        result = query_and_generate(request.question, request.image)
+        return QAResponse(**result)  # Ensure it's converted to the correct Pydantic schema
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

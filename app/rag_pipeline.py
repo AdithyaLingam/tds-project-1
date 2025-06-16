@@ -93,7 +93,7 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
             extracted_text = f"[OCR Error: {str(e)}]"
 
     final_prompt = f"{question}\n\n{extracted_text}".strip()
-    relevant_docs = vector_store.similarity_search(final_prompt, k=4)
+    relevant_docs = vector_store.similarity_search(final_prompt, k=6)
     context = "\n\n".join([doc.page_content for doc in relevant_docs])
 
     messages = [
