@@ -100,7 +100,7 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
 
     final_prompt = f"{question}\n\n{extracted_text}".strip()
     results: List[Tuple[Document, float]] = vector_store.similarity_search_with_score(final_prompt, k=6)
-    relevant_docs = [doc for doc, score in results if score is None or score > 0.7][:3]
+    top_docs = [doc for doc, score in results if score is None or score > 0.3][:4]
     context = "\n\n".join([doc.page_content for doc in relevant_docs])
 
     messages = [
