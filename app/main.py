@@ -32,8 +32,12 @@ async def form_root(request: Request):
 async def handle_form(
     request: Request,
     question: str = Form(...),
-    image: Optional[UploadFile] = File(None)
+    image: Optional[UploadFile | str] = File(None)
 ):
+
+    if isinstance(image, str):
+        image = None
+
     image_preview = None
     image_base64 = None
 
