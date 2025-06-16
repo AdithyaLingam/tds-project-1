@@ -4,6 +4,7 @@ fastapi
 uvicorn
 mangum
 jinja2>=3.0
+python-multipart
 
 # AI & Data Processing
 openai
