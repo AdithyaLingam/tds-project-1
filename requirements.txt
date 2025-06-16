@@ -3,6 +3,7 @@
 fastapi
 uvicorn
 mangum
+jinja2>=3.0
 
 # AI & Data Processing
 openai
