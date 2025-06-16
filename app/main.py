@@ -73,6 +73,6 @@ async def handle_form(
 async def handle_api_json(request: QARequest):
     try:
         result = query_and_generate(request.question, request.image)
-        return QAResponse(**result)  # Ensure it's converted to the correct Pydantic schema
+        return QAResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

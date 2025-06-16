@@ -86,9 +86,15 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
         import pytesseract
 
         try:
+            # Strip prefix if it exists
+            if image_b64.startswith("data:image"):
+                image_b64 = image_b64.split(",")[1]
+
             image_data = base64.b64decode(image_b64)
             image = Image.open(BytesIO(image_data))
             extracted_text = pytesseract.image_to_string(image)
+            print("OCR TEXT:", extracted_text)  # Debug
+
         except Exception as e:
             extracted_text = f"[OCR Error: {str(e)}]"
 
@@ -115,6 +121,7 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
         )
         response.raise_for_status()
         answer = response.json()["choices"][0]["message"]["content"].strip()
+        
     except Exception as e:
         answer = f"Backend is working! Error: {str(e)}"
 
