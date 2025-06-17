@@ -1,5 +1,5 @@
 {
-  "dependencies": {
-    "promptfoo": "^0.115.0"
+  "devDependencies": {
+    "promptfoo": "^0.115.1"
   }
 }
