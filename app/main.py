@@ -70,7 +70,7 @@ async def handle_form(
             "answer": f"Backend is working! Error: {str(e)}"
         })
 
-@app.post("/", response_model=QAResponse)
+@app.post("/api", response_model=QAResponse)
 async def handle_json_post(payload: QARequest = Body(...)):
     try:
         result = query_and_generate(payload.question, payload.image)
@@ -78,8 +78,8 @@ async def handle_json_post(payload: QARequest = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.on_event("startup")
-async def run_initial_tasks():
-    import subprocess
-    subprocess.run(["python", "scripts/scrape_discourse.py"])
-    subprocess.run(["python", "scripts/build_vector_store.py"])
+# @app.on_event("startup")
+# async def run_initial_tasks():
+#     import subprocess
+#     subprocess.run(["python", "scripts/scrape_discourse.py"])
+#     subprocess.run(["python", "scripts/build_vector_store.py"])

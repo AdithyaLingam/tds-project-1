@@ -49,8 +49,10 @@ def load_documents(input_dir: str) -> List[Document]:
                             metadata = {
                                 "id": post.get("id"),
                                 "topic_id": post.get("topic_id"),
+                                "post_number":post.get("post_number"),
                                 "created_at": post.get("created_at"),
-                                "username": post.get("username")
+                                "username": post.get("username"),
+                                "source": f"https://discourse.onlinedegree.iitm.ac.in/t/-/{post.get('topic_id')}/{post.get('post_number')}"
                             }
                             documents.append(Document(page_content=text, metadata=metadata))
                         else:

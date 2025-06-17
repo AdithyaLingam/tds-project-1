@@ -7,7 +7,7 @@ providers:
   - id: mistral:pixtral-12b
     config:
       apiKey: "KaMjej2dYAnmpfKexnhosaFDxbvYc3Kc"
-      url: "http://localhost:8000/api"
+      url: "https://tds-project-1-406c.onrender.com/api"
       method: POST
       headers:
         Content-Type: application/json
