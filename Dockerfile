@@ -18,7 +18,8 @@ COPY . .
 EXPOSE 8000
 
 # Ensure /app is in PYTHONPATH when running scripts
-RUN PYTHONPATH=/app python api/index.py 
+RUN PYTHONPATH=/app python api/index.py && \
+    PYTHONPATH=/app python scripts/build_vector_store.py
 
 # Run Uvicorn on the port Render provides, fallback to 8000
 CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port ${PORT}"]
