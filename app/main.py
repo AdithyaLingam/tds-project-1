@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.rag_pipeline import query_and_generate
 from typing import Optional
 from app.models import QARequest, QAResponse
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Body
 
 app = FastAPI(
     title="TDS Virtual TA API",
@@ -70,10 +70,10 @@ async def handle_form(
             "answer": f"Backend is working! Error: {str(e)}"
         })
 
-@app.post("/api", response_model=QAResponse)
-async def handle_api_json(request: QARequest):
+@app.post("/", response_model=QAResponse)
+async def handle_json_post(payload: QARequest = Body(...)):
     try:
-        result = query_and_generate(request.question, request.image)
+        result = query_and_generate(payload.question, payload.image)
         return QAResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
