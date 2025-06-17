@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.rag_pipeline import query_and_generate
 from typing import Optional
 from app.models import QARequest, QAResponse
+from fastapi import BackgroundTasks
 
 app = FastAPI(
     title="TDS Virtual TA API",
@@ -76,3 +77,9 @@ async def handle_api_json(request: QARequest):
         return QAResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.on_event("startup")
+async def run_initial_tasks():
+    import subprocess
+    subprocess.run(["python", "scripts/scrape_discourse.py"])
+    subprocess.run(["python", "scripts/build_vector_store.py"])
