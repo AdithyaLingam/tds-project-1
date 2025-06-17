@@ -15,6 +15,7 @@ pydantic-settings
 ollama
 openwebui-client
 tiktoken
+Pillow
 
 # Scraping & Vector DB
 requests
