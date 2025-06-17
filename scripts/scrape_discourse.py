@@ -15,7 +15,7 @@ DISCOURSE_BASE_URL = "https://discourse.onlinedegree.iitm.ac.in/"
 CATEGORY_SLUG = "c/courses/tds-kb"
 CATEGORY_ID = 34  # TDS category ID
 START_DATE = datetime.strptime("2025-01-01", "%Y-%m-%d")
-END_DATE = datetime.strptime("2025-06-15", "%Y-%m-%d")
+END_DATE = datetime.strptime("2025-05-01", "%Y-%m-%d")
 
 OUTPUT_DIR = "data/discourse_json"
 HEADERS = {
