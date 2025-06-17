@@ -21,7 +21,7 @@ tests:
   - name: GA5 model clarification
     provider: mistral:pixtral-12b
     vars:
-      prompt: "What is the deadline for tools for data science graded assignment 2 Jan 2025 term?"
+      prompt: "What is the deadline for project 2 Jan 2025 term?"
   - name: Student email + ID from image
     provider: mistral:pixtral-12b
     vars:
