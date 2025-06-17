@@ -123,20 +123,23 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
         response.raise_for_status()
         answer = response.json()["choices"][0]["message"]["content"].strip()
 
-        # Extract links from the source documents
+        # Extract links from the retrieved documents
         links = []
         for doc in relevant_docs:
             metadata = doc.metadata
-            if "source" in metadata:
+            source = metadata.get("source")
+            if source:
                 links.append({
-                    "url": metadata["source"],
-                    "text": metadata.get("title", metadata["source"])  # Optional title fallback
+                    "url": source,
+                    "text": metadata.get("title", "Related discussion")
                 })
+
+        return {
+            "answer": answer,
+            "links": links
+        }
 
     except Exception as e:
         answer = f"Backend is working! Error: {str(e)}"
 
-    return {
-        "answer": answer,
-        "links": []
-    }
+
