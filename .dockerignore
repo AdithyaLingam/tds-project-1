@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+.venv/
+venv/
+data/chroma_db/
+data/discourse_json/
+.git/
+.gitignore
+*.sqlite3

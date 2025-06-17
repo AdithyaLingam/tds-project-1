@@ -1,0 +1,105 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TDS Virtual TA</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffffff;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        textarea, input[type="file"] {
+            padding: 0.5rem;
+            font-size: 1rem;
+            border-radius: 5px;
+            width: 100%;
+        }
+
+        button {
+            width: 100px;
+            padding: 0.5rem;
+            background-color: #a855f7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .response {
+            max-width: 600px;
+            margin: 2rem auto;
+            background-color: #1e1e1e;
+            padding: 1rem;
+            border-radius: 10px;
+        }
+
+        .image-preview {
+            display: block;
+            max-width: 100%;
+            margin: 0 auto 1rem;
+            border-radius: 10px;
+        }
+
+        .link-list {
+            margin-top: 1rem;
+        }
+
+        .link-list a {
+            color: #93c5fd;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>TDS Virtual TA</h1>
+    <form method="post" enctype="multipart/form-data">
+        <label for="question">Enter your question:</label>
+        <textarea name="question" rows="3" required>{{ question or '' }}</textarea>
+
+        <label for="image">Upload image (optional):</label>
+        <input type="file" name="image">
+
+        <button type="submit">Ask</button>
+    </form>
+
+    {% if image_preview %}
+        <div class="response">
+            <img src="{{ image_preview }}" alt="Uploaded Image" class="image-preview">
+        </div>
+    {% endif %}
+
+    {% if answer %}
+    <div class="response">
+        <strong>Answer:</strong>
+        <p>{{ answer|safe }}</p>
+
+        {% if links %}
+        <div class="link-list">
+            {% for link in links %}
+                <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</body>
+</html>

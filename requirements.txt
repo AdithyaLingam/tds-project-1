@@ -1,0 +1,23 @@
+# requirements.txt
+# API
+fastapi
+uvicorn
+mangum
+jinja2>=3.0
+python-multipart
+
+# AI & Data Processing
+openai
+chromadb
+beautifulsoup4
+pydantic
+pydantic-settings
+ollama
+openwebui-client
+tiktoken
+
+# Scraping & Vector DB
+requests
+langchain
+langchain-community
+langchain-openai
