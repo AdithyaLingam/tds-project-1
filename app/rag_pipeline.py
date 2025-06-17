@@ -70,7 +70,7 @@ def process_image(base64_image: str) -> str:
     except ImportError:
         return "Image OCR dependencies not installed."
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         image_data = base64.b64decode(base64_image)
         temp_file.write(image_data)
         temp_file.close()
