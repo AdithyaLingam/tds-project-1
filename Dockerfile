@@ -17,8 +17,9 @@ COPY . .
 # Expose port for Render
 EXPOSE 8000
 
-RUN python scripts/scrape_discourse.py && \
-    python scripts/build_vector_store.py
+# Ensure /app is in PYTHONPATH when running scripts
+RUN PYTHONPATH=/app python scripts/scrape_discourse.py && \
+    PYTHONPATH=/app python scripts/build_vector_store.py
 
 # Run Uvicorn on the port Render provides, fallback to 8000
 CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"]
