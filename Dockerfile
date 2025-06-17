@@ -14,8 +14,11 @@ RUN apt-get update && apt-get install -y \
 # Copy the rest of the app
 COPY . .
 
-# Expose port for Railway
+# Expose port for Render
 EXPOSE 8000
 
-# Run Uvicorn on the port Railway provides, fallback to 8000
+# Run Uvicorn on the port Render provides, fallback to 8000
 CMD ["sh", "-c", "uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"]
+
+RUN python scripts/scrape_discourse.py && \
+    python scripts/build_vector_store.py
