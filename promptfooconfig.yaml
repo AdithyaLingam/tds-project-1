@@ -15,7 +15,7 @@ providers:
         question: "{{ prompt }}"
         image: "{{ image | default(null) }}"
       transformResponse: |
-        ({ answer: json.answer, links: json.links || [] })
+        ({ output: json.answer, answer: json.answer, links: json.links || [] })
 
 tests:
   - name: GA5 model clarification
