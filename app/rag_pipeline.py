@@ -3,8 +3,12 @@ import os
 import base64
 import requests
 import tempfile
-from typing import List, Tuple
+from io import BytesIO
+from typing import List, Tuple, Optional
+from PIL import Image
+import pytesseract
 from app.config import settings
+from langchain_community.vectorstores import Chroma
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
@@ -63,45 +67,25 @@ def ask_question(question: str) -> str:
         return f"Backend is working! Error: Error code: {response.status_code} - {response.text}"
     return response.json()["choices"][0]["message"]["content"]
 
+# --- OCR for image input ---
 def process_image(base64_image: str) -> str:
     try:
-        import pytesseract
-        from PIL import Image
-    except ImportError:
-        return "Image OCR dependencies not installed."
-
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        if base64_image.startswith("data:image"):
+            base64_image = base64_image.split(",")[1]
         image_data = base64.b64decode(base64_image)
-        temp_file.write(image_data)
-        temp_file.close()
-        image = Image.open(temp_file.name)
-        return pytesseract.image_to_string(image)
+        image = Image.open(BytesIO(image_data))
+        return pytesseract.image_to_string(image).strip()
+    except Exception as e:
+        return f"[OCR Error: {str(e)}]"
 
-def query_and_generate(question: str, image_b64: str | None = None) -> dict:
-    extracted_text = ""
-    if image_b64:
-        from io import BytesIO
-        import base64
-        from PIL import Image
-        import pytesseract
+# --- Query & generate answer ---
+def query_and_generate(question: str, image_b64: Optional[str] = None) -> dict:
+    extracted_text = process_image(image_b64) if image_b64 else ""
+    full_prompt = f"{question}\n\n{extracted_text}".strip()
 
-        try:
-            # Strip prefix if it exists
-            if image_b64.startswith("data:image"):
-                image_b64 = image_b64.split(",")[1]
-
-            image_data = base64.b64decode(image_b64)
-            image = Image.open(BytesIO(image_data))
-            extracted_text = pytesseract.image_to_string(image)
-            print("OCR TEXT:", extracted_text)  # Debug
-
-        except Exception as e:
-            extracted_text = f"[OCR Error: {str(e)}]"
-
-    final_prompt = f"{question}\n\n{extracted_text}".strip()
-    results: List[Tuple[Document, float]] = vector_store.similarity_search_with_score(final_prompt, k=5)
+    results: List[Tuple[Document, float]] = vector_store.similarity_search_with_score(full_prompt, k=5)
     relevant_docs = [doc for doc, score in results if score is None or score >= 0.2]
-    context = "\n\n".join([doc.page_content for doc in relevant_docs])
+    context = "\n\n".join(doc.page_content for doc in relevant_docs)
 
     messages = [
         {"role": "system", "content": "You are a teaching assistant answering questions using the Tools in Data Science course material."},
@@ -123,15 +107,13 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
         response.raise_for_status()
         answer = response.json()["choices"][0]["message"]["content"].strip()
 
-        # Extract links from the retrieved documents
         links = []
         for doc in relevant_docs:
-            metadata = doc.metadata
-            source = metadata.get("source")
+            source = doc.metadata.get("source")
             if source:
                 links.append({
                     "url": source,
-                    "text": metadata.get("title", "Related discussion")
+                    "text": doc.metadata.get("title", "Related discussion")
                 })
 
         return {
@@ -144,5 +126,3 @@ def query_and_generate(question: str, image_b64: str | None = None) -> dict:
             "answer": f"Backend is working! Error: {str(e)}",
             "links": []
         }
-
-

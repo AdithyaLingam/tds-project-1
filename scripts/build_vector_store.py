@@ -12,6 +12,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_chroma import Chroma
 from langchain.vectorstores.base import VectorStore
 from openai import OpenAI
+import requests 
 from typing import List
 from langchain.schema import Document
 from pathlib import Path
@@ -25,10 +26,51 @@ openai_client = OpenAI(
 )
 
 # --- Hardcoded Configuration (except API key via os.getenv) ---
+BASE_URL = "https://tds.s-anand.net/2025-01/"
+SAVE_DIR = Path("data/tds_pages_md")
 DISCOURSE_JSON_DIR = "data/discourse_json"
 VECTOR_STORE_DIR = "data/chroma_db"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 # ---------------------------------------------------------------
+
+# ---------- SCRAPE COURSE PAGES ----------
+def scrape_tds_pages():
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
+
+    index_url = f"{BASE_URL}index.html"
+    print(f"Fetching TOC: {index_url}")
+    response = requests.get(index_url)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Find all hrefs to *.html (lesson pages)
+    links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".html")]
+    seen = set()
+
+    for link in tqdm(links, desc="Scraping course pages"):
+        if link in seen:
+            continue
+        seen.add(link)
+
+        full_url = f"{BASE_URL}{link}"
+        try:
+            res = requests.get(full_url, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+
+            content_div = soup.find("div", {"id": "app"})
+            if content_div is None:
+                print(f"Skipping {link} - no app div")
+                continue
+
+            text = content_div.get_text(separator="\n").strip()
+            if text:
+                filename = SAVE_DIR / (link.replace(".html", ".md"))
+                with open(filename, "w", encoding="utf-8") as f:
+                    f.write(text)
+        except Exception as e:
+            print(f"Failed to scrape {link}: {e}")
+
+    print(f"Scraped {len(seen)} markdown pages to {SAVE_DIR}")
+
 
 def load_documents(input_dir: str) -> List[Document]:
     documents = []
@@ -76,25 +118,35 @@ def load_markdown_documents(md_dir: str) -> List[Document]:
 
 def embed_with_retry(client: OpenAI, texts: list[str], retries: int = 3, delay: int = 2) -> list[list[float]]:
     # Sanitize input to be a list of clean strings
-    cleaned_texts = [str(t).strip()[:2000] for t in texts if isinstance(t, str) and t.strip()]
+    cleaned_texts = [ str(t).strip()[:2000] for t in texts if isinstance(t, str) and t.strip() ]
+
     if not cleaned_texts:
         raise ValueError("No valid strings to embed.")
 
-    print(f"[DEBUG] Sending {len(cleaned_texts)} texts for embedding")
+    all_embeddings = []
 
-    for attempt in range(retries):
-        try:
-            response = client.embeddings.create(
-                model=EMBEDDING_MODEL,
-                input=cleaned_texts
-            )
-            return [d.embedding for d in response.data]
-        except Exception as e:
-            print(f"Embedding failed on attempt {attempt+1}/{retries}: {e}")
-            if attempt < retries - 1:
-                time.sleep(delay)
-            else:
-                raise
+    # Chunk into batches
+    batch_size = 100
+    for i in tqdm(range(0, len(cleaned_texts), batch_size), desc="Embedding Progress", dynamic_ncols=True):
+        batch = cleaned_texts[i:i+batch_size]
+
+        for attempt in range(retries):
+            try:
+                print(f"[DEBUG] Embedding batch {i // batch_size + 1} with {len(batch)} texts...")
+                response = client.embeddings.create(
+                    model=EMBEDDING_MODEL,
+                    input=batch
+                )
+                all_embeddings.extend([d.embedding for d in response.data])
+                break
+            except Exception as e:
+                print(f"Embedding failed on attempt {attempt+1}/{retries} for batch {i//batch_size + 1}: {e}")
+                if attempt < retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+
+    return all_embeddings
 
 # LangChain wrapper for OpenAI embeddings
 class OpenAIEmbeddingsViaProxy(Embeddings):
@@ -105,47 +157,30 @@ class OpenAIEmbeddingsViaProxy(Embeddings):
         return embed_with_retry(openai_client, [text])[0]
 
 def main():
-    print("Loading documents...")
+    scrape_tds_pages()
+
     discourse_docs = load_documents(DISCOURSE_JSON_DIR)
-    print("Loading Markdown pages...")
-    markdown_docs = load_markdown_documents("data/tds_pages_md")
+    markdown_docs = load_markdown_documents(SAVE_DIR)
+    all_docs = discourse_docs + markdown_docs
 
-    docs = discourse_docs + markdown_docs
-
-    if not docs:
-        print("No documents found. Exiting.")
+    if not all_docs:
+        print("No documents found.")
         return
-    print(f"Loaded {len(docs)} documents.")
 
-    print("Splitting documents...")
+    print(f"Splitting {len(all_docs)} documents into chunks...")
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    split_docs = splitter.split_documents(docs)
-    if not split_docs:
-        print("No content to embed. Exiting.")
+    chunks = splitter.split_documents(all_docs)
+
+    if not chunks:
+        print("No content to embed.")
         return
 
-    print(f"Total chunks: {len(split_docs)}")
+    print(f"Total chunks: {len(chunks)}")
     embedder = OpenAIEmbeddingsViaProxy()
 
-    print("Building Chroma vector store in batches...")
-    batch_size = 100
-    vectordb = None
-
-    for i in tqdm(range(0, len(split_docs), batch_size)):
-        batch = split_docs[i:i + batch_size]
-        print(f"[DEBUG] Embedding batch {i//batch_size + 1} with {len(batch)} documents...")
-
-        if vectordb is None:
-            vectordb = Chroma.from_documents(
-                documents=batch,
-                embedding=embedder,
-                persist_directory=VECTOR_STORE_DIR
-            )
-        else:
-            vectordb.add_documents(batch)
-
-    print(f"Vector store built and saved to: {VECTOR_STORE_DIR}")
+    print("Building Chroma vector store...")
+    vectordb = Chroma.from_documents(documents=chunks, embedding=embedder, persist_directory=str(VECTOR_STORE_DIR))
+    print("Vector store built and saved.")
 
 if __name__ == "__main__":
     main()
-
