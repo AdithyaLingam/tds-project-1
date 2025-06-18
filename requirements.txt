@@ -5,6 +5,7 @@ uvicorn
 mangum
 jinja2>=3.0
 python-multipart
+playwright
 
 # AI & Data Processing
 openai

@@ -9,6 +9,7 @@ from langchain.embeddings.base import Embeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import chromadb
 from langchain_community.vectorstores import Chroma
+from playwright.sync_api import sync_playwright
 from langchain_chroma import Chroma
 from langchain.vectorstores.base import VectorStore
 from openai import OpenAI
@@ -26,7 +27,7 @@ openai_client = OpenAI(
 )
 
 # --- Hardcoded Configuration (except API key via os.getenv) ---
-BASE_URL = "https://tds.s-anand.net/2025-01/"
+BASE_URL = "https://tds.s-anand.net/#/2025-01/"
 SAVE_DIR = Path("data/tds_pages_md")
 DISCOURSE_JSON_DIR = "data/discourse_json"
 VECTOR_STORE_DIR = "data/chroma_db"
@@ -42,39 +43,45 @@ HEADERS = {
 def scrape_tds_pages():
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-    index_url = f"{BASE_URL}index.html"
-    print(f"Fetching TOC: {index_url}")
-    response = requests.get(index_url, headers=HEADERS)
-    soup = BeautifulSoup(response.text, "html.parser")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".html")]
-    seen = set()
+        full_url = "https://tds.s-anand.net/#/2025-01/"
+        print(f"Loading TOC from: {full_url}")
+        page.goto(full_url, wait_until="networkidle")
 
-    for link in tqdm(links, desc="Scraping course pages"):
-        if link in seen:
-            continue
-        seen.add(link)
+        # Trigger rendering by waiting for sidebar links
+        for i in range(60):
+            links_count = page.evaluate("() => document.querySelectorAll('aside.sidebar a[href^=\"#/\"]').length")
+            if links_count > 0:
+                break
+            print(f"Waiting for sidebar links... {i+1}s")
+            time.sleep(1)
+        else:
+            raise TimeoutError("Sidebar links did not load in time.")
 
-        full_url = f"{BASE_URL}{link}"
-        try:
-            res = requests.get(full_url, headers=HEADERS, timeout=10)
-            soup = BeautifulSoup(res.text, "html.parser")
-            content_div = soup.find("div", {"id": "app"})
+        links = page.evaluate("() => Array.from(document.querySelectorAll('aside.sidebar a[href^=\"#/\"]')).map(a => a.getAttribute('href'))")
 
-            if content_div is None:
-                print(f"Skipping {link} - no app div")
+        seen = set()
+        for href in tqdm(links, desc="Scraping course pages"):
+            if not href or href in seen:
                 continue
+            seen.add(href)
 
-            text = content_div.get_text(separator="\n").strip()
-            if text:
-                filename = SAVE_DIR / (link.replace(".html", ".md"))
-                with open("debug_index.html", "w", encoding="utf-8") as f:
-                    f.write(response.text)
-                print("Wrote debug_index.html with TOC HTML snippet!")
-        except Exception as e:
-            print(f"Failed to scrape {link}: {e}")
+            # Navigate using JavaScript-based routing
+            hash_url = "https://tds.s-anand.net/" + href
+            try:
+                page.goto(hash_url, wait_until="networkidle")
+                page.wait_for_selector("article.markdown-section", timeout=10000)
+                content = page.locator("article.markdown-section").inner_text()
+                filename = href.strip("#/").replace("/", "_") + ".md"
+                (SAVE_DIR / filename).write_text(content, encoding="utf-8")
+            except Exception as e:
+                print(f"Skipped {href}: {e}")
 
-    print(f"Scraped {len(seen)} markdown pages to {SAVE_DIR}")
+        browser.close()
+    print(f"Scraped {len(seen)} pages into {SAVE_DIR}")
 
 
 def load_documents(input_dir: str) -> List[Document]:
@@ -111,16 +118,16 @@ def load_documents(input_dir: str) -> List[Document]:
     return documents
 
 def load_markdown_documents(md_dir: str) -> List[Document]:
-    md_docs = []
-    for path in Path(md_dir).rglob("*.md"):
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            if content:
-                html_path = path.name.replace(".md", "")
-                metadata = {"source": f"https://tds.s-anand.net/#/{html_path}"}
-                md_docs.append(Document(page_content=content, metadata=metadata))
-    print(f"Loaded {len(md_docs)} markdown documents.")
-    return md_docs
+    docs = []
+    for md_file in md_dir.glob("*.md"):
+        content = md_file.read_text(encoding="utf-8").strip()
+        if content:
+            docs.append(Document(
+                page_content=content,
+                metadata={"source": BASE_URL + md_file.name.replace(".md", ".html")}
+            ))
+    print(f"Loaded {len(docs)} markdown documents.")
+    return docs
 
 def embed_with_retry(client: OpenAI, texts: list[str], retries: int = 3, delay: int = 2) -> list[list[float]]:
     # Sanitize input to be a list of clean strings
