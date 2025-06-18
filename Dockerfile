@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     xdg-utils \
     wget \
-    ttf-mscorefonts-installer \
     && rm -rf /var/lib/apt/lists/*\
     && pip install --no-cache-dir -r requirements.txt
 
