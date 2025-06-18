@@ -9,6 +9,7 @@ from langchain.embeddings.base import Embeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import chromadb
 from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain.vectorstores.base import VectorStore
 from openai import OpenAI
 from typing import List
@@ -143,7 +144,7 @@ def main():
         else:
             vectordb.add_documents(batch)
 
-    vectordb.persist()
+    vectordb._client.persist()
     print(f"Vector store built and saved to: {VECTOR_STORE_DIR}")
 
 if __name__ == "__main__":

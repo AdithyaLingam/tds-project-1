@@ -5,7 +5,7 @@ import requests
 import tempfile
 from typing import List, Tuple
 from app.config import settings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -40,7 +40,7 @@ def generate_embeddings(texts: List[str]):
     vectorstore = get_vectorstore()
     documents = build_docs_from_texts(texts)
     vectorstore.add_documents(documents)
-    vectorstore.persist()
+    vectorstore._client.persist()
 
 def ask_question(question: str) -> str:
     headers = {
