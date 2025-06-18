@@ -34,7 +34,8 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 # ---------------------------------------------------------------
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "text/html"
 }
 
 # ---------- SCRAPE COURSE PAGES ----------
@@ -67,8 +68,9 @@ def scrape_tds_pages():
             text = content_div.get_text(separator="\n").strip()
             if text:
                 filename = SAVE_DIR / (link.replace(".html", ".md"))
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(text)
+                with open("debug_index.html", "w", encoding="utf-8") as f:
+                    f.write(response.text)
+                print("Wrote debug_index.html with TOC HTML snippet!")
         except Exception as e:
             print(f"Failed to scrape {link}: {e}")
 
