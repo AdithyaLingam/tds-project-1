@@ -144,7 +144,6 @@ def main():
         else:
             vectordb.add_documents(batch)
 
-    vectordb._client.persist()
     print(f"Vector store built and saved to: {VECTOR_STORE_DIR}")
 
 if __name__ == "__main__":
