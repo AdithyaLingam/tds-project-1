@@ -36,13 +36,10 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 # ---------- SCRAPE COURSE PAGES ----------
 def scrape_tds_pages():
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
-
     index_url = f"{BASE_URL}index.html"
     print(f"Fetching TOC: {index_url}")
     response = requests.get(index_url)
     soup = BeautifulSoup(response.text, "html.parser")
-
-    # Find all hrefs to *.html (lesson pages)
     links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".html")]
     seen = set()
 
@@ -55,7 +52,6 @@ def scrape_tds_pages():
         try:
             res = requests.get(full_url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
-
             content_div = soup.find("div", {"id": "app"})
             if content_div is None:
                 print(f"Skipping {link} - no app div")
@@ -84,7 +80,6 @@ def load_documents(input_dir: str) -> List[Document]:
                 with open(filepath, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     slug = data.get("slug", "-")
-                    # Fix: properly access posts in 'post_stream'
                     posts = data.get("post_stream", {}).get("posts", [])
                     for post in posts:
                         text = post.get("cooked") or post.get("raw") or ""
@@ -92,7 +87,7 @@ def load_documents(input_dir: str) -> List[Document]:
                             metadata = {
                                 "id": post.get("id"),
                                 "topic_id": post.get("topic_id"),
-                                "post_number":post.get("post_number"),
+                                "post_number": post.get("post_number"),
                                 "created_at": post.get("created_at"),
                                 "username": post.get("username"),
                                 "source": f"https://discourse.onlinedegree.iitm.ac.in/t/{slug}/{post.get('topic_id')}/{post.get('post_number')}"
@@ -112,7 +107,9 @@ def load_markdown_documents(md_dir: str) -> List[Document]:
         with open(path, "r", encoding="utf-8") as f:
             content = f.read().strip()
             if content:
-                md_docs.append(Document(page_content=content, metadata={"source": str(path)}))
+                html_path = path.name.replace(".md", "")
+                metadata = {"source": f"https://tds.s-anand.net/#/{html_path}"}
+                md_docs.append(Document(page_content=content, metadata=metadata))
     print(f"Loaded {len(md_docs)} markdown documents.")
     return md_docs
 
