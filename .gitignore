@@ -42,10 +42,9 @@ share/python-wheels/
 MANIFEST
 
 # Local database and data storage
-data/
 *.db
 *.sqlite3
-chroma_db/
+data/chroma_db/
 
 # PyInstaller
 *.manifest

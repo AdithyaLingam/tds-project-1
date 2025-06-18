@@ -8,3 +8,4 @@ venv/
 .git/
 .gitignore
 *.sqlite3
+data/chroma_db/
