@@ -33,13 +33,19 @@ VECTOR_STORE_DIR = "data/chroma_db"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 # ---------------------------------------------------------------
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
 # ---------- SCRAPE COURSE PAGES ----------
 def scrape_tds_pages():
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
+
     index_url = f"{BASE_URL}index.html"
     print(f"Fetching TOC: {index_url}")
-    response = requests.get(index_url)
+    response = requests.get(index_url, headers=HEADERS)
     soup = BeautifulSoup(response.text, "html.parser")
+
     links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".html")]
     seen = set()
 
@@ -50,9 +56,10 @@ def scrape_tds_pages():
 
         full_url = f"{BASE_URL}{link}"
         try:
-            res = requests.get(full_url, timeout=10)
+            res = requests.get(full_url, headers=HEADERS, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             content_div = soup.find("div", {"id": "app"})
+
             if content_div is None:
                 print(f"Skipping {link} - no app div")
                 continue
