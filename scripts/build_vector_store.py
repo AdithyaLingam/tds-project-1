@@ -40,7 +40,7 @@ def load_documents(input_dir: str) -> List[Document]:
             try:
                 with open(filepath, "r", encoding="utf-8") as f:
                     data = json.load(f)
-
+                    slug = data.get("slug", "-")
                     # Fix: properly access posts in 'post_stream'
                     posts = data.get("post_stream", {}).get("posts", [])
                     for post in posts:
@@ -52,7 +52,7 @@ def load_documents(input_dir: str) -> List[Document]:
                                 "post_number":post.get("post_number"),
                                 "created_at": post.get("created_at"),
                                 "username": post.get("username"),
-                                "source": f"https://discourse.onlinedegree.iitm.ac.in/t/-/{post.get('topic_id')}/{post.get('post_number')}"
+                                "source": f"https://discourse.onlinedegree.iitm.ac.in/t/{slug}/{post.get('topic_id')}/{post.get('post_number')}"
                             }
                             documents.append(Document(page_content=text, metadata=metadata))
                         else:
@@ -75,11 +75,7 @@ def load_markdown_documents(md_dir: str) -> List[Document]:
 
 def embed_with_retry(client: OpenAI, texts: list[str], retries: int = 3, delay: int = 2) -> list[list[float]]:
     # Sanitize input to be a list of clean strings
-    cleaned_texts = [
-        str(t).strip()[:2000] for t in texts
-        if isinstance(t, str) and t.strip()
-    ]
-
+    cleaned_texts = [str(t).strip()[:2000] for t in texts if isinstance(t, str) and t.strip()]
     if not cleaned_texts:
         raise ValueError("No valid strings to embed.")
 
