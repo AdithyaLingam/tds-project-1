@@ -21,5 +21,9 @@ EXPOSE 8000
 RUN PYTHONPATH=/app python scripts/scrape_discourse.py && \
     PYTHONPATH=/app python scripts/build_vector_store.py
 
+
+# Add PYTHONPATH so FastAPI can find modules
+ENV PYTHONPATH=/app
+
 # Run Uvicorn on the port Railway provides, fallback to 8000
 CMD uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}
