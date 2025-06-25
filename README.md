@@ -16,28 +16,41 @@ It automatically answers student questions using scraped course material and for
 ---
 
 ## 📂 Project Structure
-
+<pre>
 tds-project-1/
-├── api/                     # FastAPI or Flask backend application (main logic lives here)
-│   └── main.py              # Entry point for the API
+├── api/
+│   └── index.py                        # Entry point for FastAPI backend
 │
-├── app/                     # Optional: frontend templates or assets (if applicable)
+├── app/
+│   ├── __pycache__/
+│   ├── config.py                       # Configuration settings
+│   ├── main.py                         # App-level initialization and routes
+│   ├── models.py                       # Pydantic models and schemas
+│   └── rag_pipeline.py                 # Core Retrieval-Augmented Generation logic
 │
-├── data/                    # Scraped Discourse/course data (optional or temporary)
+├── data/
+│   ├── chroma_db/                      # Local vector store (ChromaDB)
+│   ├── discourse_json/                 # Scraped Discourse data (JSON)
+│   └── tds_pages_md/                   # Course pages content (Markdown format)
 │
-├── scripts/                 # Custom Python scripts
-│   └── scrape_discourse.py # Script to scrape forum posts within a date range
+├── node_modules/                       # Node dependencies (if used in frontend)
 │
-├── templates/               # HTML templates (for web UI rendering)
+├── scripts/
+│   ├── build_vector_store.py           # Script to build vector DB from scraped data
+│   └── scrape_discourse.py             # Script to scrape Discourse forums
 │
-├── Dockerfile               # Container setup for backend deployment
-├── docker-compose.yml       # Optional multi-container orchestration
-├── promptfooconfig.yaml     # Config for Promptfoo evaluation tool
-├── requirements.txt         # Python dependencies
-├── vercel.json              # Vercel deployment configuration
-├── Procfile                 # Heroku deployment entry point
-├── LICENSE                  # MIT License
-└── README.md                # Project documentation
+├── templates/
+│   └── index.html                      # Basic HTML UI (if applicable)
+│
+├── Dockerfile                          # Container setup for deployment
+├── docker-compose.yml                  # (Optional) Multi-service container config
+├── promptfooconfig.yaml                # Promptfoo evaluation config
+├── requirements.txt                    # Python dependencies
+├── vercel.json                         # Deployment config for Vercel
+├── Procfile                            # Heroku deployment entry point
+├── LICENSE                             # MIT License
+└── README.md                           # You are here 📄
+</pre>
 
 ## ⚙️ Getting Started
 
