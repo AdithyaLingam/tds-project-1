@@ -11,7 +11,7 @@ It automatically answers student questions using scraped course material and for
 - **API Endpoint**: Accepts POST requests with student queries and optional base64-encoded images.
 - **Automated Responses**: Uses OpenAI GPT models to generate answers and provides relevant Discourse links.
 - **Fast & Accurate**: Responds in under 30 seconds and validated using *Promptfoo* against realistic student queries.
-- **Deployment-Ready**: Dockerized and deployed via Vercel/Heroku (or your chosen platform). Promptfoo config included.
+- **Deployment-Ready**: Dockerized and deployed via Vercel/Railway/Render (or your chosen platform). Promptfoo config included.
 
 ---
 
