@@ -82,7 +82,7 @@ tds-project-1/
     ```
 5. Run Locally:
     ```bash
-    uvicorn api.main:app --reload
+    uvicorn api.index:app --reload
     ```
 6. Test the API:
     ```bash
